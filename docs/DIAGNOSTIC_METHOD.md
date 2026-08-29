@@ -1,0 +1,5 @@
+# Diagnostic Method
+
+The v0.1 diagnostic stack combines uncertainty-normalized twin residuals, metadata freshness, source trust, and cross-signal rules. Labels include `NORMAL`, `SENSOR_FAULT`, `EQUIPMENT_DEGRADATION`, `QUALITY_ANOMALY`, `NETWORK_FAULT`, `CYBERATTACK`, and `MODEL_MISMATCH`.
+
+The classifier is intentionally interpretable and should be treated as a research baseline rather than a validated diagnostic system.

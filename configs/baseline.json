@@ -1,0 +1,1 @@
+{"steps":400,"dt_s":1.0,"seed":42,"base_load":1.0,"accelerated_degradation":false,"model_mismatch":0.0,"attack":{"kind":"vibration_spoof","start_step":120,"end_step":220,"magnitude":0.42,"rewrite_metadata":false}}
