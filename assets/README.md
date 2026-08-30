@@ -4,9 +4,8 @@ This directory stores visual assets for the trustworthy smart-factory CPS resear
 
 ## Repository images
 
-Upload the two final academic images using these exact filenames:
+- `bannerr.png` — primary wide README banner.
+- `architecturee.png` — layered smart-factory CPS architecture figure used in the README and `docs/ARCHITECTURE.md`.
+- `visualization.png` — digital-twin smart-factory visualization used in the README and `docs/DIGITAL_TWIN.md`.
 
-- `factory-cps-banner.png` — wide README banner based on the digital-twin smart-factory visual
-- `factory-cps-architecture.png` — layered architecture diagram for the README and `docs/ARCHITECTURE.md`
-
-Temporary `.placeholder` marker files indicate the intended filenames. After the PNGs are uploaded and verified, the placeholders can be removed and the images embedded into the documentation.
+These images are project illustrations for documentation and communication. They do not represent measurements or imagery from a real factory deployment.
