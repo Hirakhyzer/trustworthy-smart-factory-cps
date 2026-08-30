@@ -1,5 +1,9 @@
 # Trustworthy Smart Factory Cyber-Physical System
 
+<p align="center">
+  <img src="assets/bannerr.png" alt="Trustworthy Smart Factory CPS banner" width="100%">
+</p>
+
 [![CI](https://github.com/Hirakhyzer/trustworthy-smart-factory-cps/actions/workflows/ci.yml/badge.svg)](https://github.com/Hirakhyzer/trustworthy-smart-factory-cps/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Status](https://img.shields.io/badge/status-research%20prototype-orange)
@@ -11,6 +15,10 @@ A reproducible **smart-manufacturing + cybersecurity + CPS** research platform c
 ## Core research question
 
 **Can a smart-factory CPS distinguish cyberattack, sensor fault, equipment degradation, quality anomaly, network fault, and ordinary model mismatch well enough to preserve production safely and transparently?**
+
+<p align="center">
+  <img src="assets/architecturee.png" alt="Smart Factory CPS architecture" width="100%">
+</p>
 
 ```text
 Factory process -> sensors -> synthetic faults/attacks -> network
@@ -29,6 +37,14 @@ Factory process -> sensors -> synthetic faults/attacks -> network
                              |
                          Factory process
 ```
+
+## Digital-twin concept
+
+The digital twin provides an interpretable reference for expected machine health, process signals, cycle behavior, and product quality. Detector residuals are normalized by uncertainty so model mismatch can be studied separately from abrupt cyber or fault effects.
+
+<p align="center">
+  <img src="assets/visualization.png" alt="Trustworthy smart-factory digital-twin visualization" width="100%">
+</p>
 
 ## Implemented in v0.1
 
