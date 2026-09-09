@@ -10,6 +10,7 @@ from factorycps.twin.digital_twin import FactoryDigitalTwin
 from factorycps.diagnostics.anomaly import PhysicsAnomalyDetector
 from factorycps.diagnostics.trust import TrustEngine
 from factorycps.diagnostics.fault_diagnosis import diagnose
+from factorycps.maintenance.degradation import estimate_health
 from factorycps.control.supervisor import ResilientSupervisor
 from factorycps.metrics.evaluation import classification_metrics, production_metrics
 
@@ -49,12 +50,13 @@ def run_simulation(config: SimulationConfig | None=None):
             values=last_values.values
         else:
             fscore=1.0; det=type('D',(),{'score':4.0,'anomaly':True,'residuals':{k:0.0 for k in ['temperature_c','vibration','motor_current_a','cycle_time_s','quality_score']}})(); trust=trust_engine.update(det.residuals,fscore); dg='NETWORK_FAULT'; values=measured
-        dec=supervisor.decide(dg,det.anomaly,min(trust.values()),snap.machine.health,snap.inspection.score)
+        health_estimate=estimate_health(values,load)
+        dec=supervisor.decide(dg,det.anomaly,min(trust.values()),health_estimate,snap.inspection.score)
         load=dec.load_command
         active_attack=attack.active(step) and attack.c.kind!='none'
         records.append({
             'step':step,'time_s':step*c.dt_s,'packet_received':packet_received,'delivered_packet_count':delivered_packet_count,'attack_active':active_attack,
-            'true_health':snap.machine.health,'true_temperature_c':snap.machine.temperature_c,'true_vibration':snap.machine.vibration,
+            'true_health':snap.machine.health,'estimated_health':health_estimate,'true_temperature_c':snap.machine.temperature_c,'true_vibration':snap.machine.vibration,
             'true_current_a':snap.machine.motor_current_a,'true_cycle_time_s':snap.machine.cycle_time_s,'true_quality':snap.inspection.score,
             'measured_temperature_c':float(values['temperature_c']),'measured_vibration':float(values['vibration']),'measured_current_a':float(values['motor_current_a']),
             'measured_quality':float(values['quality_score']),'twin_temperature_c':pred.temperature_c,'twin_vibration':pred.vibration,'twin_current_a':pred.motor_current_a,
@@ -67,4 +69,5 @@ def run_simulation(config: SimulationConfig | None=None):
     summary['packets_delivered']=delivered_packets
     summary['packet_delivery_fraction']=delivered_packets/len(records)
     summary['step_receive_fraction']=sum(r['packet_received'] for r in records)/len(records)
+    summary['final_estimated_health']=records[-1]['estimated_health']
     return records, summary
