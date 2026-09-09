@@ -7,3 +7,11 @@ def test_normal_simulation_runs():
 
 def test_obvious_temperature_attack_detected():
     _,s=run_simulation(SimulationConfig(steps=160,attack=AttackConfig(kind='temperature_bias',start_step=40,end_step=120,magnitude=10),network=NetworkConfig(loss_probability=0,latency_steps=0,jitter_steps=0))); assert s['recall'] > 0.8
+
+def test_network_delivery_metrics_have_explicit_semantics():
+    records,summary=run_simulation(SimulationConfig(steps=40,attack=AttackConfig(kind='none',start_step=999,end_step=1000),network=NetworkConfig(loss_probability=0,latency_steps=1,jitter_steps=2,seed=9)))
+    delivered=sum(r['delivered_packet_count'] for r in records)
+    receive_steps=sum(r['packet_received'] for r in records)
+    assert summary['packets_delivered'] == delivered
+    assert summary['packet_delivery_fraction'] == delivered/len(records)
+    assert summary['step_receive_fraction'] == receive_steps/len(records)
