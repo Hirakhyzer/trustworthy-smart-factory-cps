@@ -45,7 +45,7 @@ def run_simulation(config: SimulationConfig | None=None):
             pvals=pred.__dict__.copy(); pvals['production_count']=step+1
             det=detector.evaluate(last_values.values,pvals,fscore)
             trust=trust_engine.update(det.residuals,fscore)
-            dg=diagnose(last_values.values,pvals,det.residuals,fscore,trust,snap.machine.health)
+            dg=diagnose(last_values.values,pvals,det.residuals,fscore,trust)
             values=last_values.values
         else:
             fscore=1.0; det=type('D',(),{'score':4.0,'anomaly':True,'residuals':{k:0.0 for k in ['temperature_c','vibration','motor_current_a','cycle_time_s','quality_score']}})(); trust=trust_engine.update(det.residuals,fscore); dg='NETWORK_FAULT'; values=measured
