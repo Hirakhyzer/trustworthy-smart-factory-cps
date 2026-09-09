@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
-import math
+
+REFERENCE_AMBIENT_C = 24.0
 
 @dataclass
 class MachineParams:
@@ -37,7 +38,8 @@ class Machine:
         else:
             s.health = max(0.0, s.health - self.p.wear_rate_per_cycle * (0.6 + load))
         degradation = 1.0 - s.health
-        target_temp = self.p.base_temp_c + 18.0 * load + 26.0 * degradation
+        ambient_offset = self.p.ambient_c - REFERENCE_AMBIENT_C
+        target_temp = self.p.base_temp_c + ambient_offset + 18.0 * load + 26.0 * degradation
         s.temperature_c += self.p.cooling_rate * (target_temp - s.temperature_c)
         s.vibration = self.p.base_vibration + 0.18 * load + 1.55 * degradation
         s.motor_current_a = self.p.base_current_a + 3.2 * load + 5.5 * degradation
