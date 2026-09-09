@@ -36,7 +36,8 @@ def run_simulation(config: SimulationConfig | None=None):
         measured=sensors.read(snap)
         pkt=TelemetryPacket(step,step*c.dt_s,'machine-1',measured)
         pkt=attack.apply(pkt,step); net.send(pkt); delivered=net.receive()
-        packet_received=bool(delivered)
+        delivered_packet_count=len(delivered)
+        packet_received=delivered_packet_count > 0
         if delivered: last_values=delivered[-1]
         pred=twin.predict(load)
         if last_values is not None:
@@ -52,7 +53,7 @@ def run_simulation(config: SimulationConfig | None=None):
         load=dec.load_command
         active_attack=attack.active(step) and attack.c.kind!='none'
         records.append({
-            'step':step,'time_s':step*c.dt_s,'packet_received':packet_received,'attack_active':active_attack,
+            'step':step,'time_s':step*c.dt_s,'packet_received':packet_received,'delivered_packet_count':delivered_packet_count,'attack_active':active_attack,
             'true_health':snap.machine.health,'true_temperature_c':snap.machine.temperature_c,'true_vibration':snap.machine.vibration,
             'true_current_a':snap.machine.motor_current_a,'true_cycle_time_s':snap.machine.cycle_time_s,'true_quality':snap.inspection.score,
             'measured_temperature_c':float(values['temperature_c']),'measured_vibration':float(values['vibration']),'measured_current_a':float(values['motor_current_a']),
@@ -61,5 +62,9 @@ def run_simulation(config: SimulationConfig | None=None):
             'supervisor_state':dec.state,'load_command':dec.load_command,
         })
     labels=[r['attack_active'] for r in records]; preds=[r['anomaly'] for r in records]
-    summary=production_metrics(records); summary.update(classification_metrics(labels,preds)); summary['packet_delivery_fraction']=sum(r['packet_received'] for r in records)/len(records)
+    summary=production_metrics(records); summary.update(classification_metrics(labels,preds))
+    delivered_packets=sum(r['delivered_packet_count'] for r in records)
+    summary['packets_delivered']=delivered_packets
+    summary['packet_delivery_fraction']=delivered_packets/len(records)
+    summary['step_receive_fraction']=sum(r['packet_received'] for r in records)/len(records)
     return records, summary
