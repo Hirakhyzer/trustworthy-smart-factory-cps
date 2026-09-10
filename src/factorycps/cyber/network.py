@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from copy import deepcopy
 import numpy as np
 from .telemetry import TelemetryPacket
 
@@ -15,11 +16,12 @@ class NetworkChannel:
         self.rng = np.random.default_rng(self.c.seed)
         self.q: list[tuple[int,TelemetryPacket]] = []
         self.step_idx = 0
-    def send(self, packet: TelemetryPacket) -> None:
+    def send(self, packet: TelemetryPacket) -> bool:
         if self.rng.random() < self.c.loss_probability:
-            return
+            return False
         jitter = int(self.rng.integers(0, self.c.jitter_steps+1)) if self.c.jitter_steps else 0
-        self.q.append((self.step_idx + self.c.latency_steps + jitter, packet))
+        self.q.append((self.step_idx + self.c.latency_steps + jitter, deepcopy(packet)))
+        return True
     def receive(self) -> list[TelemetryPacket]:
         ready=[p for t,p in self.q if t <= self.step_idx]
         self.q=[(t,p) for t,p in self.q if t > self.step_idx]
