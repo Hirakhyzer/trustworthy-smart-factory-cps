@@ -7,7 +7,7 @@ from factorycps.cyber.network import NetworkChannel, NetworkConfig
 from factorycps.cyber.attacks import AttackEngine, AttackConfig
 from factorycps.cyber.freshness import FreshnessMonitor
 from factorycps.twin.digital_twin import FactoryDigitalTwin
-from factorycps.diagnostics.anomaly import PhysicsAnomalyDetector
+from factorycps.diagnostics.anomaly import PhysicsAnomalyDetector, Detection
 from factorycps.diagnostics.trust import TrustEngine
 from factorycps.diagnostics.fault_diagnosis import diagnose
 from factorycps.maintenance.degradation import estimate_health
@@ -32,6 +32,7 @@ def run_simulation(config: SimulationConfig | None=None):
     sensors=SensorSuite(SensorConfig(seed=c.seed)); net=NetworkChannel(c.network or NetworkConfig(seed=c.seed+1)); attack=AttackEngine(c.attack or AttackConfig())
     freshness=FreshnessMonitor(); twin=FactoryDigitalTwin(c.model_mismatch); detector=PhysicsAnomalyDetector(); trust_engine=TrustEngine(); supervisor=ResilientSupervisor()
     records=[]; last_values=None; load=c.base_load
+    residual_keys=['temperature_c','vibration','motor_current_a','cycle_time_s','quality_score']
     for step in range(c.steps):
         snap=factory.step(load=load)
         measured=sensors.read(snap)
@@ -39,9 +40,13 @@ def run_simulation(config: SimulationConfig | None=None):
         pkt=attack.apply(pkt,step); net.send(pkt); delivered=net.receive()
         delivered_packet_count=len(delivered)
         packet_received=delivered_packet_count > 0
-        if delivered: last_values=delivered[-1]
+        if delivered:
+            last_values=delivered[-1]
         pred=twin.predict(load)
-        if last_values is not None:
+        if packet_received and last_values is not None:
+            # Freshness is evaluated only for newly received telemetry. Re-feeding
+            # the same held packet during a communication gap would falsely turn
+            # loss/latency into replay evidence.
             fscore=freshness.score(last_values.seq,last_values.timestamp_s)
             pvals=pred.__dict__.copy(); pvals['production_count']=step+1
             det=detector.evaluate(last_values.values,pvals,fscore)
@@ -49,13 +54,21 @@ def run_simulation(config: SimulationConfig | None=None):
             dg=diagnose(last_values.values,pvals,det.residuals,fscore,trust)
             values=last_values.values
         else:
-            fscore=1.0; det=type('D',(),{'score':4.0,'anomaly':True,'residuals':{k:0.0 for k in ['temperature_c','vibration','motor_current_a','cycle_time_s','quality_score']}})(); trust=trust_engine.update(det.residuals,fscore); dg='NETWORK_FAULT'; values=measured
+            # No new telemetry is a communication condition, not a cyber replay
+            # observation. Keep sensor residuals neutral, reduce network trust,
+            # and let the supervisor enter WATCH via the explicit diagnosis.
+            fscore=1.0
+            det=Detection(score=0.0,anomaly=False,residuals={k:0.0 for k in residual_keys})
+            trust=trust_engine.update(det.residuals,fscore)
+            dg='NETWORK_FAULT'
+            values=last_values.values if last_values is not None else measured
         health_estimate=estimate_health(values,load)
         dec=supervisor.decide(dg,det.anomaly,min(trust.values()),health_estimate,snap.inspection.score)
         load=dec.load_command
         active_attack=attack.active(step) and attack.c.kind!='none'
+        telemetry_age_s=(step*c.dt_s-last_values.timestamp_s) if last_values is not None else step*c.dt_s
         records.append({
-            'step':step,'time_s':step*c.dt_s,'packet_received':packet_received,'delivered_packet_count':delivered_packet_count,'attack_active':active_attack,
+            'step':step,'time_s':step*c.dt_s,'packet_received':packet_received,'delivered_packet_count':delivered_packet_count,'communication_fault':not packet_received,'telemetry_age_s':float(max(0.0,telemetry_age_s)),'attack_active':active_attack,
             'true_health':snap.machine.health,'estimated_health':health_estimate,'true_temperature_c':snap.machine.temperature_c,'true_vibration':snap.machine.vibration,
             'true_current_a':snap.machine.motor_current_a,'true_cycle_time_s':snap.machine.cycle_time_s,'true_quality':snap.inspection.score,
             'measured_temperature_c':float(values['temperature_c']),'measured_vibration':float(values['vibration']),'measured_current_a':float(values['motor_current_a']),
@@ -69,5 +82,7 @@ def run_simulation(config: SimulationConfig | None=None):
     summary['packets_delivered']=delivered_packets
     summary['packet_delivery_fraction']=delivered_packets/len(records)
     summary['step_receive_fraction']=sum(r['packet_received'] for r in records)/len(records)
+    summary['communication_fault_fraction']=sum(r['communication_fault'] for r in records)/len(records)
+    summary['mean_telemetry_age_s']=sum(r['telemetry_age_s'] for r in records)/len(records)
     summary['final_estimated_health']=records[-1]['estimated_health']
     return records, summary
