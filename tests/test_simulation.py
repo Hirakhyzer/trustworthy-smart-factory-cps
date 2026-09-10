@@ -16,6 +16,7 @@ def test_network_delivery_metrics_have_explicit_semantics():
     assert summary['packet_delivery_fraction'] == delivered/len(records)
     assert summary['step_receive_fraction'] == receive_steps/len(records)
     assert summary['communication_fault_fraction'] == 1.0-summary['step_receive_fraction']
+    assert summary['packet_delivery_fraction'] >= summary['step_receive_fraction']
 
 def test_total_packet_loss_is_not_mislabeled_as_cyber_replay():
     records,summary=run_simulation(SimulationConfig(steps=30,attack=AttackConfig(kind='none',start_step=999,end_step=1000),network=NetworkConfig(loss_probability=1.0,latency_steps=0,jitter_steps=0,seed=3)))
@@ -23,3 +24,10 @@ def test_total_packet_loss_is_not_mislabeled_as_cyber_replay():
     assert summary['fp'] == 0
     assert all(r['diagnosis'] == 'NETWORK_FAULT' for r in records)
     assert all(not r['anomaly'] for r in records)
+
+def test_attack_labels_follow_delivered_factory_packets():
+    _,summary=run_simulation(SimulationConfig(steps=180,attack=AttackConfig(kind='temperature_bias',start_step=50,end_step=100,magnitude=10),network=NetworkConfig(loss_probability=0,latency_steps=2,jitter_steps=1,seed=5)))
+    assert summary['attack_packets_generated'] == 50
+    assert summary['attack_packets_dropped'] == 0
+    assert summary['attack_packets_observed'] == 50
+    assert summary['attack_delivery_fraction'] == 1.0
